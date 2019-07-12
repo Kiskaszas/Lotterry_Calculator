@@ -1,11 +1,12 @@
 package calculation;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -36,8 +37,11 @@ public class WinnerCalculator {
 
     private static final Pattern TAG_REGEX = Pattern.compile("(\\d{1,2})?(\\d{1,2}( +)?){5}", Pattern.DOTALL);
 
+    private ArrayList<String> badLines;
+
     public WinnerCalculator(String inputFilePath) {
         this.inputFilePath = inputFilePath;
+        badLines = new ArrayList<>();
         winners = new HashMap<>();
         winners.put(2, 0);
         winners.put(3, 0);
@@ -56,7 +60,7 @@ public class WinnerCalculator {
             count = Files.readAllLines(getFilePath(inputFilePath), StandardCharsets.US_ASCII).stream().count();
             if (count <= MAX_LINES) {
                 Files.readAllLines(getFilePath(inputFilePath), StandardCharsets.US_ASCII)
-                        .forEach(line -> checkLine(line));
+                        .forEach(this::checkLine);
             } else {
                 throw new IOException(FILE_EXCEPTION_MESSAGE);
             }
@@ -85,12 +89,12 @@ public class WinnerCalculator {
     }
 
     /**
-     * A sort megnézi, hogy a Matcherben a feltételeknek megfelel majd levizsgálja, hogy nincs benne 90-es számnál nagyobb
-     * vagy 0 vagy annál kissebb.
-     * Illetve nem csak 4 szám van megadva.
-     * vagy 1-es számnál kissebb.
+     * A sort megn&eacute;zi, hogy a Matcherben a felt&eacute;teleknek megfelel majd levizsg&aacute;lja, hogy nincs benne 90-es sz&aacute;mn&aacute;l nagyobb
+     * vagy 0 vagy ann&aacute;l kissebb.
+     * Illetve nem csak 4 sz&aacute;m van megadva.
+     * vagy 1-es sz&aacute;mn&aacute;l kissebb.
      * @param line
-     * @return
+     * @return boolean
      */
     private boolean checkLine(String line) {
 
@@ -99,53 +103,20 @@ public class WinnerCalculator {
                 && numberBetweenCheck(line.split("\\D+"))){
             return true;
         } else {
-            badDataLine(line);
+            badLines.add(line);
             return false;
         }
-
-        /*if (TAG_REGEX.matcher(line).matches()) {
-            String[] lineRegexArray = line.split("\\D+");
-            if (lineRegexArray.length == 5) {
-                if(numberBetweenCheck(lineRegexArray)) {
-                    return true;
-                } else {
-                    badDataLine(line);
-                }
-            } else {
-                badDataLine(line);
-            }
-        } else {
-            badDataLine(line);
-        }
-        return false;*/
     }
 
     /**
-     * Száok megnézése hogy 1 és 90 között van.
+     * Számok megnézése hogy 1 és 90 között van.
      * @param lineRegexArray
      * @return
      */
     private boolean numberBetweenCheck(String[] lineRegexArray) {
-        return Arrays.stream(lineRegexArray)
-                .filter(numbers -> Integer.valueOf(numbers) < MIN_NUMBER)
-                .count() == 0
+        return Arrays.stream(lineRegexArray).noneMatch(numbers -> Integer.valueOf(numbers) < MIN_NUMBER)
                 &&
-                Arrays.stream(lineRegexArray)
-                .filter(numbers -> Integer.valueOf(numbers) > MAX_NUMBER)
-                .count() == 0;
-    }
-
-    /**
-     * Ha az adott sor nem fel meg a kritériumnak akkor IOException-t dobunk a megfelelő üzenettel.
-     * @param line
-     */
-    private void badDataLine(String line) {
-        try {
-            throw new IOException(BAD_DATA_LINE_EXCEPTION + line);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
+                Arrays.stream(lineRegexArray).noneMatch(numbers -> Integer.valueOf(numbers) > MAX_NUMBER);
     }
 
     /**
@@ -153,24 +124,8 @@ public class WinnerCalculator {
      * Ha egy generált szám már létezik a tömben akkor generál új számot.
      */
     public void generateLotteryNumbers() {
-        lotteryRandomNumbers = new int[NUMBERS];
-        System.out.print(LOTTERRY_NUMBERS_TEXT);
-        int number;
-        boolean goOut = true;
-        int count = 0;
-        while (goOut){
-            number = (int) (Math.random() * MAX_NUMBER) + MIN_NUMBER;
-            int finalNumber = number;
-            if (!Arrays.stream(lotteryRandomNumbers).anyMatch(value -> value == finalNumber)) {
-                this.lotteryRandomNumbers[count] = number;
-                System.out.print(number + " ");
-                count++;
-            }
-            if (count == 5){
-                goOut = false;
-            }
-        }
-        System.out.println("\n");
+        lotteryRandomNumbers = ThreadLocalRandom.current().ints(1, 90).distinct().limit(5).toArray();
+        Arrays.stream(lotteryRandomNumbers).forEach(System.out::println);
     }
 
     /**
@@ -179,8 +134,11 @@ public class WinnerCalculator {
     public void startCalculation() {
         try {
             Files.readAllLines(getFilePath(inputFilePath), StandardCharsets.US_ASCII)
-                    .forEach(line -> countWinnersByInputData(line));
+                    .stream()
+                    .filter(line -> !badLines.contains(line))
+                    .forEach(this::countWinnersByInputData);
             showCalculatedWinners();
+            System.out.println("badlines: "+badLines.toString());
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -207,7 +165,7 @@ public class WinnerCalculator {
      */
     private void showCalculatedWinners() {
         StringBuilder stringBuilder = new StringBuilder();
-        ArrayList<Integer> keys = new ArrayList<Integer>(winners.keySet());
+        ArrayList<Integer> keys = new ArrayList<>(winners.keySet());
 
         stringBuilder
                 .append(NUMBER_MATCHING_TEXT)
