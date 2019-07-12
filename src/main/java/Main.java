@@ -1,11 +1,6 @@
 import calculation.WinnerCalculator;
 import validation.FileValidation;
-
-import java.util.Arrays;
-import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
-import java.util.function.IntFunction;
-import java.util.stream.Stream;
 
 public class Main {
 
@@ -18,7 +13,6 @@ public class Main {
         FileValidation fileValidation = new FileValidation();
         try {
             WinnerCalculator winnerCalculator = new WinnerCalculator(fileValidation.hasInputFile(args)[0]);
-            winnerCalculator.generateLotteryNumbers();
             final long startTime = System.currentTimeMillis();
             winnerCalculator.startCalculation();
             final long endTime = System.currentTimeMillis();
