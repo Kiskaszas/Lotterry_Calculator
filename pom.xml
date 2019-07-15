@@ -8,6 +8,14 @@
     <artifactId>Lotterry_Calculator</artifactId>
     <version>1.1</version>
     <description>Kaszas_Viktor_Lotterry_calculator_test</description>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
     <packaging>jar</packaging>
 
     <properties>

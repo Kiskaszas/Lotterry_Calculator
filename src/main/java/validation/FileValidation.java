@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -25,6 +26,8 @@ public class FileValidation {
     private static final int MAX_NUMBER = 90;
     private static final int MAX_LINES = 10000000;
 
+    private List<ArrayList<Integer>> linesToArrayList;
+
     private long countX;
 
     private static final Pattern TAG_REGEX = Pattern.compile("(\\d{1,2})?(\\d{1,2}( +)?){5}", Pattern.DOTALL);
@@ -32,6 +35,7 @@ public class FileValidation {
 
     public FileValidation() {
         this.badLines = new ArrayList<>();
+        this.linesToArrayList = new ArrayList<>();
     }
 
     public String[] hasInputFile(String[] inputArray) {
@@ -39,11 +43,17 @@ public class FileValidation {
         Scanner scanner = new Scanner(System.in);
         while (INPUT_FILE_MISSING) {
             System.out.println(INPUT_FILE_MISSING_TEXT + "\tWrite input file: ");
-            isExitMark(scanner.next());
-            inputArray = Stream.concat(Stream.of(scanner.nextLine()), Arrays.stream(inputArray)).toArray(String[]::new);
-            INPUT_FILE_MISSING = (inputArray.length == 0 ? true : false);
+            String line = scanner.nextLine();
+            isExitMark(line);
+            inputArray = Stream.concat(Stream.of(line), Arrays.stream(inputArray)).toArray(String[]::new);
+            if (inputArray.length == 0){
+                INPUT_FILE_MISSING = true;
+            } else{
+                INPUT_FILE_MISSING = !filePathIsValid(inputArray);
+            }
+
         }
-        INPUT_FILE_MISSING = !filePathIsValid(inputArray[0]);
+
         return inputArray;
     }
 
@@ -53,12 +63,12 @@ public class FileValidation {
         }
     }
 
-    private Boolean filePathIsValid(String inputFilePath) {
+    private Boolean filePathIsValid(String[] inputFilePath) {
         try {
             return Files.list(
                     Paths.get("."))
                     .filter(Files::isRegularFile)
-                    .filter(filePath -> inputFilePath.equals(filePath.getFileName().toString()))
+                    .filter(filePath -> inputFilePath[0].equals(filePath.getFileName().toString()))
                     .collect(Collectors.toList()).size() == 1;
         } catch (IOException e) {
             return false;
@@ -66,8 +76,8 @@ public class FileValidation {
     }
 
     /**
-     A beadott fájl vizsgálálása.
-     Előszört a fájl hosszát méri le és ha nem nagyobb mint 10 millió akkor elkezdődik a sorok vizsgálása.
+     * A beadott fájl vizsgálálása.
+     * Előszört a fájl hosszát méri le és ha nem nagyobb mint 10 millió akkor elkezdődik a sorok vizsgálása.
      */
     public void checkInputFile(String inputFilePath) {
         System.out.println(CHECKING_TEXT);
@@ -86,6 +96,7 @@ public class FileValidation {
 
     /**
      * Vissza adja Beadott file elérési útját Path objektumként
+     *
      * @param inputFilePath
      * @return
      * @throws IOException
@@ -96,7 +107,7 @@ public class FileValidation {
                     .filter(Files::isRegularFile)
                     .filter(filePath -> inputFilePath.equals(filePath.getFileName().toString()))
                     .collect(Collectors.toList()).get(0);
-        } catch (IndexOutOfBoundsException ex){
+        } catch (IndexOutOfBoundsException ex) {
             throw new IndexOutOfBoundsException(BAD_INPUT_FILE_PATH_TEXT);
         }
     }
@@ -106,14 +117,17 @@ public class FileValidation {
      * vagy 0 vagy ann&aacute;l kissebb.
      * Illetve nem csak 4 sz&aacute;m van megadva.
      * vagy 1-es sz&aacute;mn&aacute;l kissebb.
+     *
      * @param line
      * @return boolean
      */
     public boolean checkLine(String line) {
         countX += 1;
-        if(TAG_REGEX.matcher(line).matches()
+        if (TAG_REGEX.matcher(line).matches()
                 && line.split("\\D+").length == 5
-                && numberBetweenCheck(line.split("\\D+"))){
+                && numberBetweenCheck(line.split("\\D+"))) {
+            linesToArrayList.add(Arrays.asList(line.split("\\s+")).stream()
+                    .mapToInt(value -> Integer.valueOf(value)).collect(ArrayList::new, ArrayList::add, ArrayList::addAll));
             return true;
         } else {
             badLines.add(line);
@@ -131,5 +145,9 @@ public class FileValidation {
         return Arrays.stream(lineRegexArray).noneMatch(numbers -> Integer.valueOf(numbers) < MIN_NUMBER)
                 &&
                 Arrays.stream(lineRegexArray).noneMatch(numbers -> Integer.valueOf(numbers) > MAX_NUMBER);
+    }
+
+    public List<ArrayList<Integer>> getLinesToArrayList() {
+        return linesToArrayList;
     }
 }
